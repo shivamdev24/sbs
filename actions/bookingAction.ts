@@ -3,8 +3,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { getCurrentUser } from "./getCurrentUser";
-import { Prisma } from "@/generated/prisma/browser";
+// import { getCurrentUser } from "./getCurrentUser";
+import { Prisma } from "@prisma/client";
 
 // ============================================================================
 // TYPES
