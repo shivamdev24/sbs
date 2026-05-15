@@ -3,8 +3,8 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { get } from "http";
 import { getCurrentUser } from "./getCurrentUser";
+import { Prisma } from "@/generated/prisma/browser";
 
 // ============================================================================
 // TYPES
@@ -232,121 +232,123 @@ export async function createBooking(data: CreateBookingData) {
     // TRANSACTION
     // ============================================================================
 
-    const booking = await prisma.$transaction(async (tx) => {
-      // ============================================================================
-      // CREATE BOOKING
-      // ============================================================================
+    const booking = await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        // ============================================================================
+        // CREATE BOOKING
+        // ============================================================================
 
-      // const createdBooking = await tx.booking.create({
-      //   data: {
-      //     businessProfileId: data.businessProfileId,
+        // const createdBooking = await tx.booking.create({
+        //   data: {
+        //     businessProfileId: data.businessProfileId,
 
-      //     staffId: data.staffId || null,
+        //     staffId: data.staffId || null,
 
-      //     date: bookingDate,
+        //     date: bookingDate,
 
-      //     time: bookingTime,
+        //     time: bookingTime,
 
-      //     totalPrice: finalTotal,
+        //     totalPrice: finalTotal,
 
-      //     discountAmount,
+        //     discountAmount,
 
-      //     discountCodeId,
+        //     discountCodeId,
 
-      //     bookingType: data.bookingType,
+        //     bookingType: data.bookingType,
 
-      //     notes: data.notes || null,
+        //     notes: data.notes || null,
 
-      //     items: {
-      //       create: bookingItemsData,
-      //     },
-      //   },
+        //     items: {
+        //       create: bookingItemsData,
+        //     },
+        //   },
 
-      //   include: {
-      //     customer: true,
+        //   include: {
+        //     customer: true,
 
-      //     staff: true,
+        //     staff: true,
 
-      //     items: {
-      //       include: {
-      //         service: true,
+        //     items: {
+        //       include: {
+        //         service: true,
 
-      //         variant: true,
+        //         variant: true,
 
-      //         staff: true,
-      //       },
-      //     },
+        //         staff: true,
+        //       },
+        //     },
 
-      //     discountCode: true,
-      //   },
-      // });
+        //     discountCode: true,
+        //   },
+        // });
 
-      const createdBooking = await tx.booking.create({
-        data: {
-          BBABookingName: data.customerName, // You can replace this with actual admin name if available
-          BBABookingPhone: data.customerPhone, // You can replace this with actual admin phone if available
-          BBABookingEmail: data.customerEmail, // You can replace this with actual admin email if available
-
-          businessProfileId: data.businessProfileId,
-
-          staffId: data.staffId || null,
-
-          date: bookingDate,
-
-          time: data.time,
-
-          totalPrice: finalTotal,
-
-          discountAmount,
-
-          discountCodeId,
-
-          bookingType: data.bookingType,
-
-          notes: data.notes || null,
-
-          items: {
-            create: bookingItemsData,
-          },
-        },
-
-        include: {
-          staff: true,
-
-          items: {
-            include: {
-              service: true,
-
-              variant: true,
-
-              staff: true,
-            },
-          },
-
-          discountCode: true,
-        },
-      });
-
-      // ============================================================================
-      // UPDATE DISCOUNT USAGE
-      // ============================================================================
-
-      if (discountCodeId) {
-        await tx.discountCode.update({
-          where: {
-            id: discountCodeId,
-          },
-
+        const createdBooking = await tx.booking.create({
           data: {
-            usedCount: {
-              increment: 1,
+            BBABookingName: data.customerName, // You can replace this with actual admin name if available
+            BBABookingPhone: data.customerPhone, // You can replace this with actual admin phone if available
+            BBABookingEmail: data.customerEmail, // You can replace this with actual admin email if available
+
+            businessProfileId: data.businessProfileId,
+
+            staffId: data.staffId || null,
+
+            date: bookingDate,
+
+            time: data.time,
+
+            totalPrice: finalTotal,
+
+            discountAmount,
+
+            discountCodeId,
+
+            bookingType: data.bookingType,
+
+            notes: data.notes || null,
+
+            items: {
+              create: bookingItemsData,
             },
+          },
+
+          include: {
+            staff: true,
+
+            items: {
+              include: {
+                service: true,
+
+                variant: true,
+
+                staff: true,
+              },
+            },
+
+            discountCode: true,
           },
         });
-      }
 
-      return createdBooking;
-    });
+        // ============================================================================
+        // UPDATE DISCOUNT USAGE
+        // ============================================================================
+
+        if (discountCodeId) {
+          await tx.discountCode.update({
+            where: {
+              id: discountCodeId,
+            },
+
+            data: {
+              usedCount: {
+                increment: 1,
+              },
+            },
+          });
+        }
+
+        return createdBooking;
+      },
+    );
 
     return {
       success: true,

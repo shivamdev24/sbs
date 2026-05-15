@@ -1,12 +1,9 @@
 // Salon Booking System - Complete Prisma Schema
 // Production-ready with all relationships, constraints, and enums
 
-// generator client {
-//   provider = "prisma-client"
-//   output   = "../generated/prisma"
-// }
 generator client {
-  provider = "prisma-client-js"
+  provider = "prisma-client"
+  output   = "../generated/prisma"
 }
 
 datasource db {

@@ -1,35 +1,26 @@
-//  data: {
-     
-//       email: "admin@sbs.io",
-//   password: "admin123",
-//   role:"ADMIN",
-//   verified: true
-//     }
-
-
-
 import { prisma } from "./lib/prisma";
+import { hashPassword } from "./lib/utils/hash";
 
 async function main() {
-  // Create a new user with a post
+  // Create
+
+  const hashedPassword = await hashPassword("admin123");
+
   const user = await prisma.user.create({
     data: {
-     
       email: "admin@sbs.io",
-  password: "admin123",
-  role:"ADMIN",
-  verified: true
-    }
+      password: hashedPassword,
+      role: "ADMIN",
+      verified: true,
+    },
   });
   console.log("Created user:", user);
 
-
   const business = await prisma.businessProfile.create({
     data: {
-     
       ownerId: user.id,
-      ownerName: "admin"
-    }
+      ownerName: "admin",
+    },
   });
   console.log("Created business:", business);
 
@@ -37,7 +28,7 @@ async function main() {
   const allUser = await prisma.user.findMany();
   console.log("All users:", JSON.stringify(allUser, null, 2));
 
-    const allUsers = await prisma.businessProfile.findMany();
+  const allUsers = await prisma.businessProfile.findMany();
   console.log("All profile:", JSON.stringify(allUsers, null, 2));
 }
 
