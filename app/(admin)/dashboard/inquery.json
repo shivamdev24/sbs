@@ -1,7 +1,0 @@
-[
-  { "accessorKey": "name", "header": "Name", "type": "text" },
-  { "accessorKey": "contact", "header": "Contact", "type": "text" },
-  { "accessorKey": "service", "header": "Service", "type": "text" },
-  { "accessorKey": "date", "header": "Date", "type": "text" },
-  { "accessorKey": "time", "header": "Time", "type": "text" }
-]

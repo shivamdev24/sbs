@@ -1,0 +1,52 @@
+[
+  {
+    "accessorKey": "name",
+    "header": "Customer Name",
+    "type": "text"
+  },
+  {
+    "accessorKey": "contact",
+    "header": "Phone",
+    "type": "text"
+  },
+  {
+    "accessorKey": "service",
+    "header": "Services",
+    "type": "text"
+  },
+  {
+    "accessorKey": "staff",
+    "header": "Staff",
+    "type": "text"
+  },
+  {
+    "accessorKey": "date",
+    "header": "Booking Date",
+    "type": "text"
+  },
+  {
+    "accessorKey": "time",
+    "header": "Time",
+    "type": "text"
+  },
+  {
+    "accessorKey": "status",
+    "header": "Status",
+    "type": "badge"
+  },
+  {
+    "accessorKey": "bookingType",
+    "header": "Booking Type",
+    "type": "text"
+  },
+  {
+    "accessorKey": "totalPrice",
+    "header": "Amount",
+    "type": "text"
+  },
+  {
+    "accessorKey": "action",
+    "header": "Action",
+    "type": "action"
+  }
+]

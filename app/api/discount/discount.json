@@ -1,5 +1,19 @@
 [
   {
+    "id": "1776846774374",
+    "code": "SAVE20",
+    "discountPercentage": 20,
+    "businessProfileId": "8afb39fd-3f01-46b9-b596-94a90d0a6c8b",
+    "expiryDate": "2026-04-30"
+  },
+  {
+    "id": "1776846766091",
+    "code": "SAVE20",
+    "discountPercentage": 20,
+    "businessProfileId": "8afb39fd-3f01-46b9-b596-94a90d0a6c8b",
+    "expiryDate": "2026-04-30"
+  },
+  {
     "id": "1776336037431",
     "code": "SAVE30",
     "percentage": 40,

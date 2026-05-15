@@ -1,25 +1,28 @@
-"use client"
+"use client";
 
-import { Button } from "@/components/ui/button"
+// import { Button } from "@/components/ui/button";
+import { usePathname } from "next/navigation";
 import {
   SidebarGroup,
   SidebarGroupContent,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import Link from "next/link"
+} from "@/components/ui/sidebar";
+import Link from "next/link";
 // import { CirclePlusIcon, MailIcon } from "lucide-react"
 
 export function NavMain({
   items,
 }: {
   items: {
-    title: string
-    url: string
-    icon?: React.ReactNode
-  }[]
+    title: string;
+    url: string;
+    icon?: React.ReactNode;
+  }[];
 }) {
+  const pathname = usePathname();
+
   return (
     <SidebarGroup>
       <SidebarGroupContent className="flex flex-col gap-2">
@@ -45,16 +48,33 @@ export function NavMain({
           </SidebarMenuItem>
         </SidebarMenu> */}
         <SidebarMenu>
-          {items.map((item) => (
-            <SidebarMenuItem key={item.title}>
-                <Link href={item.url} className="flex items-center gap-2 rounded-lg px-1.5 py-2 text-sm font-medium data-[state=open]:bg-secondary data-[state=open]:text-secondary-foreground ">
-              <SidebarMenuButton tooltip={item.title} className="hover:text-blue-700 hover:bg-blue-50">
-                  {item.icon}
-                  <span>{item.title}</span>
-              </SidebarMenuButton>
-                </Link>
-            </SidebarMenuItem>
-          ))}
+          {items.map((item) => {
+            const isActive =
+              pathname === item.url ||
+              (item.url !== "/dashboard" &&
+                pathname.startsWith(item.url + "/"));
+
+            // console.log("isActive", item.url, pathname, isActive);
+
+            return (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  className="
+  hover:bg-blue-50
+  hover:text-blue-700
+  data-[active=true]:text-blue-700
+"
+                >
+                  <Link href={item.url}>
+                    {item.icon}
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            );
+          })}
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

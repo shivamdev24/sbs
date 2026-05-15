@@ -154,6 +154,10 @@ import Image from "next/image";
 import LoginImage from "@/app/img/sbs-login.jpg";
 
 export default function LoginPage() {
+  
+
+
+
   return (
     <div className="grid min-h-svh lg:grid-cols-3">
       <div className="relative hidden bg-muted lg:block col-span-2">

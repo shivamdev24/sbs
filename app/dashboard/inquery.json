@@ -1,0 +1,52 @@
+[
+  {
+    "accessorKey": "name",
+    "header": "Lead Name",
+    "type": "text"
+  },
+  {
+    "accessorKey": "contact",
+    "header": "Phone",
+    "type": "text"
+  },
+  {
+    "accessorKey": "email",
+    "header": "Email",
+    "type": "text"
+  },
+  {
+    "accessorKey": "service",
+    "header": "Interested Service",
+    "type": "text"
+  },
+  {
+    "accessorKey": "source",
+    "header": "Source",
+    "type": "text"
+  },
+  {
+    "accessorKey": "status",
+    "header": "Status",
+    "type": "badge"
+  },
+  {
+    "accessorKey": "contacted",
+    "header": "Contacted",
+    "type": "boolean"
+  },
+  {
+    "accessorKey": "starred",
+    "header": "Starred",
+    "type": "boolean"
+  },
+  {
+    "accessorKey": "assignedTo",
+    "header": "Assigned To",
+    "type": "text"
+  },
+  {
+    "accessorKey": "type",
+    "header": "Lead Type",
+    "type": "badge"
+  }
+]

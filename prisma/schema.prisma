@@ -1,0 +1,546 @@
+// Salon Booking System - Complete Prisma Schema
+// Production-ready with all relationships, constraints, and enums
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+enum BookingType {
+  WALKINBOOKING
+  ONLINEBOOKING
+  PHONEBOOKING
+  SCHEDULEDBYSALON
+}
+
+enum PaymentStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  CARD
+  CASH
+  ONLINE
+}
+
+enum LeadType {
+  INQUIRY
+  CALLBACK
+  WALKIN
+  WHATSAPP
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  UNQUALIFIED
+  CONVERTED
+  CLOSED
+}
+
+enum ReviewRating {
+  ONE
+  TWO
+  THREE
+  FOUR
+  FIVE
+}
+
+// ============================================================================
+// AUTH & BUSINESS
+// ============================================================================
+
+model User {
+  id    String @id @default(uuid())
+  email String @unique
+
+  password String
+  role     Role   @default(USER)
+
+  verified        Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
+  otp       String?
+  otpExpiry DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  otpAttempts   Int       @default(0)
+  otpLastSentAt DateTime?
+
+  businessProfiles BusinessProfile[]
+
+  @@index([email])
+}
+
+model OtpRateLimit {
+  id    String  @id @default(cuid())
+  ip    String  @unique
+  count Int     @default(0)
+  email String?
+
+  firstHit DateTime
+  lastHit  DateTime
+}
+
+model BusinessProfile {
+  id String @id @default(uuid())
+
+  // Owner info
+  ownerId String
+  owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+
+  // Business details
+  ownerName       String?
+  businessName    String?
+  businessAddress String?
+  businessEmail   String?
+  businessContact String?
+  description     String?
+
+  // Relations
+  categories    Category[]
+  services      Service[]
+  packages      Package[]
+  staffs        Staff[]
+  bookings      Booking[]
+  customers     Customer[]
+  reviews       Review[]
+  leads         Lead[]
+  discountCodes DiscountCode[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([ownerId])
+}
+
+// ============================================================================
+// CUSTOMERS
+// ============================================================================
+
+model Customer {
+  id    String  @id @default(uuid())
+  name  String
+  phone String?
+  email String?
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  bookings Booking[]
+  reviews  Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Unique phone per business (same person can book at different salons)
+  @@unique([businessProfileId, phone])
+  @@index([businessProfileId])
+  @@index([email])
+}
+
+// ============================================================================
+// SERVICES & CATEGORIES
+// ============================================================================
+
+model Category {
+  id   String @id @default(uuid())
+  name String
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  services Service[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessProfileId, name])
+  @@index([businessProfileId])
+}
+
+model Service {
+  id       String  @id @default(uuid())
+  name     String
+  isActive Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  description String?
+  duration    Int? // Default duration in minutes
+
+  // Relations
+  variants      ServiceVariant[]
+  packageItems  PackageItem[]
+  bookingItems  BookingItem[]
+  staffServices StaffService[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessProfileId, name])
+  @@index([businessProfileId])
+  @@index([categoryId])
+}
+
+model ServiceVariant {
+  id   String @id @default(uuid())
+  name String // e.g., "Short Hair", "Long Hair", "Full Body"
+
+  price         Int // in cents (e.g., 2500 = $25.00)
+  totalDuration Int? // in minutes
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  bookingItems BookingItem[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([serviceId, name])
+  @@index([serviceId])
+}
+
+// ============================================================================
+// PACKAGES
+// ============================================================================
+
+model Package {
+  id    String @id @default(uuid())
+  name  String
+  price Int // in cents
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  items PackageItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessProfileId, name])
+  @@index([businessProfileId])
+}
+
+model PackageItem {
+  id String @id @default(uuid())
+
+  packageId String
+  package   Package @relation(fields: [packageId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  @@unique([packageId, serviceId])
+  @@index([packageId])
+  @@index([serviceId])
+}
+
+// ============================================================================
+// STAFF & SCHEDULING
+// ============================================================================
+
+model Staff {
+  id   String @id @default(uuid())
+  name String
+
+  phone   String?
+  address String?
+  email   String?
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  // Relations
+  services     StaffService[]
+  availability StaffAvailability[]
+  leaves       StaffLeave[]
+  bookings     Booking[]
+  bookingItems BookingItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([businessProfileId])
+  @@index([email])
+}
+
+model StaffService {
+  id String @id @default(uuid())
+
+  staffId String
+  staff   Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, serviceId])
+  @@index([staffId])
+  @@index([serviceId])
+}
+
+model StaffAvailability {
+  id String @id @default(uuid())
+
+  staffId String
+  staff   Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  dayOfWeek Int // 0 = Sunday, 6 = Saturday
+  startTime String // "09:00" format (HH:mm)
+  endTime   String // "17:00" format (HH:mm)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([staffId, dayOfWeek])
+  @@index([staffId])
+}
+
+model StaffLeave {
+  id String @id @default(uuid())
+
+  staffId String
+  staff   Staff  @relation(fields: [staffId], references: [id], onDelete: Cascade)
+
+  startDate DateTime
+  endDate   DateTime?
+  reason    String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([staffId, startDate])
+  @@index([staffId])
+}
+
+// ============================================================================
+// BOOKINGS & PAYMENTS
+// ============================================================================
+
+model Booking {
+  id String @id @default(uuid())
+
+  BBABookingName  String?
+  BBABookingPhone String?
+  BBABookingEmail String?
+
+  // Customer info
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  // Business
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  // Assigned staff (optional - can be assigned later)
+  staffId String?
+  staff   Staff?  @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  // Booking details
+  date DateTime
+  time String // Start time of booking
+
+  // Pricing
+  totalPrice     Int? // in cents (calculated from items + applied discount)
+  discountAmount Int? @default(0) // in cents
+
+  discountCodeId String?
+  discountCode   DiscountCode? @relation(fields: [discountCodeId], references: [id], onDelete: SetNull)
+
+  // Status
+  status      BookingStatus @default(PENDING)
+  bookingType String? // e.g., "Single Service", "Package", "Multi-Service"
+
+  // Notes & Cancellation
+  notes           String?
+  cancelledAt     DateTime?
+  cancelledReason String?
+
+  // Relations
+  items    BookingItem[]
+  payments Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([businessProfileId])
+  @@index([staffId])
+  @@index([status])
+  @@index([date])
+}
+
+model BookingItem {
+  id String @id @default(uuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  serviceId String
+  service   Service @relation(fields: [serviceId], references: [id], onDelete: Restrict)
+
+  variantId String?
+  variant   ServiceVariant? @relation(fields: [variantId], references: [id], onDelete: SetNull)
+
+  // Assigned staff for this specific item (if multi-staff booking)
+  staffId String?
+  staff   Staff?  @relation(fields: [staffId], references: [id], onDelete: SetNull)
+
+  // Price snapshot (what customer paid)
+  price    Int // in cents
+  duration Int? // in minutes
+
+  createdAt DateTime @default(now())
+
+  @@index([bookingId])
+  @@index([serviceId])
+  @@index([staffId])
+}
+
+model Payment {
+  id String @id @default(uuid())
+
+  bookingId String
+  booking   Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  amount Int // in cents
+  status PaymentStatus @default(PENDING)
+  method PaymentMethod
+
+  transactionId String? // External payment ID (for online payments)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([bookingId])
+  @@index([status])
+}
+
+// ============================================================================
+// REVIEWS & RATINGS
+// ============================================================================
+
+model Review {
+  id String @id @default(uuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  businessProfileId String
+  businessProfile   BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  rating  ReviewRating
+  comment String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([customerId, businessProfileId]) // One review per customer per salon
+  @@index([businessProfileId])
+}
+
+// ============================================================================
+// LEADS & PROMOTIONS
+// ============================================================================
+
+model Lead {
+  id String @id @default(uuid())
+
+  name String?
+
+  contact String?
+
+  email String?
+
+  message String?
+
+  service String?
+
+  source String?
+
+  status LeadStatus @default(NEW)
+
+  contacted Boolean @default(false)
+
+  starred Boolean @default(false)
+
+  assignedTo String?
+
+  notes String?
+
+  type LeadType @default(INQUIRY)
+
+  businessProfileId String
+
+  businessProfile BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([businessProfileId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model DiscountCode {
+  id String @id @default(uuid())
+
+  code String
+
+  description String?
+
+  discountPercentage Int
+
+  validFrom DateTime?
+
+  validUntil DateTime?
+
+  maxUses Int?
+
+  usedCount Int @default(0)
+
+  businessProfileId String
+
+  businessProfile BusinessProfile @relation(fields: [businessProfileId], references: [id], onDelete: Cascade)
+
+  bookings Booking[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@unique([businessProfileId, code])
+  @@index([businessProfileId])
+}

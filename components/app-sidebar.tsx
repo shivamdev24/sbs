@@ -1,11 +1,11 @@
-"use client"
+"use client";
 
-import * as React from "react"
+import * as React from "react";
 
-// import { NavDocuments } from "@/components/nav-documents"
-import { NavMain } from "@/components/nav-main"
-import { NavSecondary } from "@/components/nav-secondary"
-import { NavUser } from "@/components/nav-user"
+import { NavDocuments } from "@/components/nav-documents";
+import { NavMain } from "@/components/nav-main";
+import { NavSecondary } from "@/components/nav-secondary";
+import { NavUser } from "@/components/nav-user";
 import {
   Sidebar,
   SidebarContent,
@@ -14,17 +14,32 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@/components/ui/sidebar"
-import { LayoutDashboardIcon, ListIcon, ChartBarIcon, FolderIcon, UsersIcon, CameraIcon, FileTextIcon, Settings2Icon, CircleHelpIcon, SearchIcon, DatabaseIcon, FileChartColumnIcon, FileIcon, CommandIcon } from "lucide-react"
+} from "@/components/ui/sidebar";
 import {
-  
+  LayoutDashboardIcon,
+  ListIcon,
+  ChartBarIcon,
+  FolderIcon,
+  UsersIcon,
+  CameraIcon,
+  FileTextIcon,
+  Settings2Icon,
+  CircleHelpIcon,
+  SearchIcon,
+  DatabaseIcon,
+  FileChartColumnIcon,
+  FileIcon,
+  CommandIcon,
+} from "lucide-react";
+import {
   MessageSquareIcon,
   CalendarCheckIcon,
   BadgePercentIcon,
   ScissorsIcon,
   ReceiptIcon,
 } from "lucide-react";
-import Link from "next/link"
+import Link from "next/link";
+import { useAuthStore } from "@/lib/zustandStore/useAuthStore";
 
 const data = {
   user: {
@@ -53,17 +68,49 @@ const data = {
       url: "/dashboard/discount",
       icon: <BadgePercentIcon />,
     },
-    // {
-    //   title: "Team",
-    //   url: "/dashboard/team",
-    //   icon: <UsersIcon />,
-    // },
+    {
+      title: "Team",
+      url: "/dashboard/team",
+      icon: <UsersIcon />,
+    },
     {
       title: "Services",
       url: "/dashboard/services",
       icon: <ScissorsIcon />,
     },
   ],
+  // navMain: [
+  //   {
+  //     title: "Dashboard",
+  //     url: "/dashboard",
+  //     icon: <LayoutDashboardIcon />,
+  //   },
+  //   {
+  //     title: "Inquery",
+  //     url: "/dashboard/inquery",
+  //     icon: <MessageSquareIcon />,
+  //   },
+  //   {
+  //     title: "Booking",
+  //     url: "/dashboard/booking",
+  //     icon: <CalendarCheckIcon />,
+  //   },
+  //   {
+  //     title: "Discount",
+  //     url: "/dashboard/discount",
+  //     icon: <BadgePercentIcon />,
+  //   },
+  //   // {
+  //   //   title: "Team",
+  //   //   url: "/dashboard/team",
+  //   //   icon: <UsersIcon />,
+  //   // },
+  //   {
+  //     title: "Services",
+  //     url: "/dashboard/services",
+  //     icon: <ScissorsIcon />,
+  //   },
+  // ],
   navClouds: [
     {
       title: "Capture",
@@ -123,32 +170,40 @@ const data = {
       url: "/dashboard/help",
       icon: <CircleHelpIcon />,
     },
-    {
-      title: "Search",
-      url: "/dashboard/search",
-      icon: <SearchIcon />,
-    },
+    // {
+    //   title: "Search",
+    //   url: "/dashboard/search",
+    //   icon: <SearchIcon />,
+    // },
   ],
   documents: [
     {
-      name: "Data Library",
-      url: "#",
+      name: "Add booking",
+      url: "/dashboard/booking/create-booking",
       icon: <DatabaseIcon />,
     },
-    {
-      name: "Reports",
-      url: "#",
-      icon: <FileChartColumnIcon />,
-    },
-    {
-      name: "Word Assistant",
-      url: "#",
-      icon: <FileIcon />,
-    },
+    // {
+    //   name: "Reports",
+    //   url: "#",
+    //   icon: <FileChartColumnIcon />,
+    // },
+    // {
+    //   name: "Word Assistant",
+    //   url: "#",
+    //   icon: <FileIcon />,
+    // },
   ],
 };
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+  const user = useAuthStore((state) => state.user);
+  // console.log("User in AppSidebar:", user);
+
+  const userData = {
+    role: user?.role || "Guest",
+    email: user?.email || "",
+  };
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -158,9 +213,14 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               asChild
               className="data-[slot=sidebar-menu-button]:p-1.5!"
             >
-              <Link href="/dashboard" className="flex items-center gap-2 rounded-lg px-1.5 py-2 text-sm font-medium data-[state=open]:bg-secondary data-[state=open]:text-secondary-foreground">
+              <Link
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-lg px-1.5 py-2 text-sm font-medium data-[state=open]:bg-secondary data-[state=open]:text-secondary-foreground"
+              >
                 <CommandIcon className="size-5!" />
-                <span className="text-base font-semibold">Salon Booking Sys.</span>
+                <span className="text-base font-semibold">
+                  Salon Booking Sys.
+                </span>
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
@@ -168,12 +228,12 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       </SidebarHeader>
       <SidebarContent>
         <NavMain items={data.navMain} />
-        {/* <NavDocuments items={data.documents} /> */}
         <NavSecondary items={data.navSecondary} className="mt-auto" />
+        <NavDocuments items={data.documents} />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={userData} where="sidebar" />
       </SidebarFooter>
     </Sidebar>
-  )
+  );
 }

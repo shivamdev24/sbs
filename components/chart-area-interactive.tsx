@@ -310,12 +310,20 @@
 //   )
 // }
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
+
 "use client";
 
 import * as React from "react";
+
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts";
 
+import { useBusinessStore } from "@/lib/zustandStore/useBusinessStore";
+
+import { getBookings } from "@/actions/bookingAction";
+
 import { useIsMobile } from "@/hooks/use-mobile";
+
 import {
   Card,
   CardAction,
@@ -342,115 +350,213 @@ import {
 
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 
-// 👉 import your local JSON
-import bookings from "@/app/(admin)/dashboard/booking-data.json";
+// ============================================================================
+// TYPES
+// ============================================================================
+
+type Booking = {
+  id: string;
+
+  date: string | Date;
+
+  status: "PENDING" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+
+  totalPrice?: number | null;
+
+  bookingType?: string | null;
+};
 
 type ChartItem = {
   date: string;
+
   bookings: number;
-  inquiries: number;
+
+  completed: number;
+
   revenue: number;
 };
 
-// ---------------- TRANSFORM LOGIC ----------------
-function buildChartData(data: any[], days: number) {
-  const map = new Map();
+// ============================================================================
+// TRANSFORM LOGIC
+// ============================================================================
 
-  // create date buckets
+function buildChartData(data: Booking[], days: number): ChartItem[] {
+  const map = new Map<string, ChartItem>();
+
+  // Create date buckets
   for (let i = 0; i < days; i++) {
     const d = new Date();
-    // console.log(d);
+
+    d.setHours(0, 0, 0, 0);
+
     d.setDate(d.getDate() - i);
 
     const key = d.toLocaleDateString("en-CA");
 
     map.set(key, {
       date: key,
+
       bookings: 0,
-      inquiries: 0,
+
+      completed: 0,
+
       revenue: 0,
     });
   }
 
-  data.forEach((item) => {
-    const key = new Date(item.date).toLocaleDateString("en-CA");
+  data.forEach((booking) => {
+    if (!booking.date) return;
+
+    const key = new Date(booking.date).toLocaleDateString("en-CA");
 
     if (!map.has(key)) return;
 
-    const day = map.get(key);
+    const day = map.get(key)!;
 
-    // 🔍 detect inquiry vs booking
-    const isInquiry = item.service.toLowerCase().includes("inquiry");
+    // Total bookings
+    day.bookings += 1;
 
-    if (isInquiry) {
-      day.inquiries += 1;
-    } else {
-      day.bookings += 1;
+    // Completed bookings
+    if (booking.status === "COMPLETED") {
+      day.completed += 1;
+    }
 
- if (!isInquiry) {
-   day.bookings += 1;
-
-   const amount = parseFloat(item.amount);
-
-   if (
-     !isNaN(amount) &&
-     (item.bookingConfirmation === "confirmed" ||
-       item.bookingConfirmation === "completed")
-   ) {
-     day.revenue += amount;
-   }
- }
-
-//  console.log(
-//    data.map((d) => ({
-//      date: d.date,
-//      revenue: d.revenue,
-//    })),
-//  );
+    // Revenue
+    if (booking.status === "COMPLETED" || booking.status === "CONFIRMED") {
+      day.revenue += Number(booking.totalPrice || 0);
     }
   });
 
   return Array.from(map.values()).reverse();
 }
 
-// ---------------- CONFIG ----------------
+// ============================================================================
+// CHART CONFIG
+// ============================================================================
+
 const chartConfig = {
-  bookings: { label: "Bookings", color: "var(--chart-2)" },
-  revenue: { label: "Revenue", color: "var(--chart-6)" },
+  bookings: {
+    label: "Bookings",
+
+    color: "var(--primary)",
+  },
+
+  revenue: {
+    label: "Revenue",
+
+    color: "var(--chart-6)",
+  },
+
+  completed: {
+    label: "Completed",
+
+    color: "var(--chart-2)",
+  },
 } satisfies ChartConfig;
 
-// ---------------- COMPONENT ----------------
+// ============================================================================
+// COMPONENT
+// ============================================================================
+
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile();
+
+  const business = useBusinessStore((s) => s.business);
+
+  const businessProfileId = business?.id;
+
   const [timeRange, setTimeRange] = React.useState("15d");
+
+  const [loading, setLoading] = React.useState(true);
+
+  const [bookings, setBookings] = React.useState<Booking[]>([]);
+
   const [data, setData] = React.useState<ChartItem[]>([]);
 
+  // ============================================================================
+  // MOBILE RANGE
+  // ============================================================================
+
   React.useEffect(() => {
-    if (isMobile) setTimeRange("7d");
+    if (isMobile) {
+      setTimeRange("7d");
+    }
   }, [isMobile]);
+
+  // ============================================================================
+  // FETCH BOOKINGS
+  // ============================================================================
+
+  React.useEffect(() => {
+    const fetchBookings = async () => {
+      if (!businessProfileId) return;
+
+      try {
+        setLoading(true);
+
+        const res = await getBookings(businessProfileId);
+
+        if (res.success) {
+          setBookings(res.data || []);
+        }
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, [businessProfileId]);
+
+  // ============================================================================
+  // BUILD CHART DATA
+  // ============================================================================
 
   React.useEffect(() => {
     let days = 90;
+
     if (timeRange === "30d") days = 30;
+
     if (timeRange === "15d") days = 15;
+
     if (timeRange === "7d") days = 7;
 
     const chartData = buildChartData(bookings, days);
+
     setData(chartData);
-  }, [timeRange]);
+  }, [bookings, timeRange]);
+
+  // ============================================================================
+  // EMPTY STATE
+  // ============================================================================
 
   const isEmpty = data.every(
-    (d) => d.bookings === 0 && d.revenue === 0 ,
+    (d) => d.bookings === 0 && d.completed === 0 && d.revenue === 0,
   );
 
-// console.log(buildChartData(bookings,  7));
+  // ============================================================================
+  // TOTALS
+  // ============================================================================
 
+  const totalRevenue = data.reduce((acc, item) => acc + item.revenue, 0);
+
+  const totalBookings = data.reduce((acc, item) => acc + item.bookings, 0);
+
+  // ============================================================================
+  // UI
+  // ============================================================================
 
   return (
-    <Card className="@container/card">
+    <Card className="@container/card rounded-3xl border shadow-sm">
       <CardHeader>
-        <CardTitle>Salon Analytics</CardTitle>
-        <CardDescription>Track bookings & revenue</CardDescription>
+        <div className="space-y-1">
+          <CardTitle>Booking Analytics</CardTitle>
+
+          <CardDescription>
+            Track bookings, completed appointments & revenue
+          </CardDescription>
+        </div>
 
         <CardAction>
           <ToggleGroup
@@ -461,8 +567,11 @@ export function ChartAreaInteractive() {
             className="hidden @[767px]/card:flex"
           >
             <ToggleGroupItem value="7d">7D</ToggleGroupItem>
+
             <ToggleGroupItem value="15d">15D</ToggleGroupItem>
+
             <ToggleGroupItem value="30d">30D</ToggleGroupItem>
+
             <ToggleGroupItem value="90d">3M</ToggleGroupItem>
           </ToggleGroup>
 
@@ -470,111 +579,150 @@ export function ChartAreaInteractive() {
             <SelectTrigger className="w-32 @[767px]/card:hidden" size="sm">
               <SelectValue />
             </SelectTrigger>
+
             <SelectContent>
               <SelectItem value="7d">Last 7 days</SelectItem>
+
               <SelectItem value="15d">Last 15 days</SelectItem>
+
               <SelectItem value="30d">Last 30 days</SelectItem>
+
               <SelectItem value="90d">Last 3 months</SelectItem>
             </SelectContent>
           </Select>
         </CardAction>
       </CardHeader>
 
-      <CardContent className="pt-4">
-        {isEmpty && (
-          <div className="text-xs text-muted-foreground px-2 pb-2">
-            No data available for this period
+      <CardContent className="space-y-5 pt-2">
+        {/* STATS */}
+
+        {/* <div className="grid gap-4 md:grid-cols-2">
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">Total Bookings</p>
+
+            <h3 className="mt-2 text-3xl font-bold">{totalBookings}</h3>
+          </div>
+
+          <div className="rounded-2xl border bg-muted/30 p-4">
+            <p className="text-sm text-muted-foreground">Revenue</p>
+
+            <h3 className="mt-2 text-3xl font-bold">₹{totalRevenue}</h3>
+          </div>
+        </div> */}
+
+        {/* EMPTY */}
+
+        {!loading && isEmpty && (
+          <div className="rounded-2xl border border-dashed py-10 text-center text-sm text-muted-foreground">
+            No analytics data available
           </div>
         )}
 
-        <ChartContainer config={chartConfig} className="h-[280px] w-full">
-          <AreaChart data={data}>
-            <defs>
-              <linearGradient id="fillBookings" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--primary)"
-                  stopOpacity={0.6}
-                />
-                <stop
-                  offset="35%"
-                  stopColor="var(--primary)"
-                  stopOpacity={0.1}
-                />
-              </linearGradient>
+        {/* CHART */}
 
-              <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop
-                  offset="5%"
-                  stopColor="var(--chart-6)"
-                  stopOpacity={0.6}
-                />
-                <stop
-                  offset="95%"
-                  stopColor="var(--chart-6)"
-                  stopOpacity={0.05}
-                />
-              </linearGradient>
-            </defs>
+        {!isEmpty && (
+          <ChartContainer config={chartConfig} className="h-[320px] w-full">
+            <AreaChart data={data}>
+              <defs>
+                <linearGradient id="fillBookings" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--primary)"
+                    stopOpacity={0.4}
+                  />
 
-            <CartesianGrid vertical={false} />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--primary)"
+                    stopOpacity={0.05}
+                  />
+                </linearGradient>
 
-            {/* ✅ REQUIRED */}
-            {/* <YAxis yAxisId="left" />
-            <YAxis
-              yAxisId="right"
-              orientation="right"
-              tickFormatter={(v) => `₹${v}`}
-            /> */}
+                <linearGradient id="fillRevenue" x1="0" y1="0" x2="0" y2="1">
+                  <stop
+                    offset="5%"
+                    stopColor="var(--chart-6)"
+                    stopOpacity={0.5}
+                  />
 
-            <XAxis
-              dataKey="date"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={8}
-              tickFormatter={(value) =>
-                new Date(value).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })
-              }
-            />
+                  <stop
+                    offset="95%"
+                    stopColor="var(--chart-6)"
+                    stopOpacity={0.05}
+                  />
+                </linearGradient>
+              </defs>
 
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  labelFormatter={(value) =>
-                    new Date(value).toLocaleDateString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                    })
-                  }
-                />
-              }
-            />
+              <CartesianGrid vertical={false} />
 
-            {/* bookings */}
-            <Area
-              yAxisId="left"
-              dataKey="bookings"
-              type="monotone"
-              fill="url(#fillBookings)"
-              stroke="var(--primary)"
-              fillOpacity={0.3} // 👈 add this
-            />
+              <YAxis
+                yAxisId="left"
+                tickLine={false}
+                axisLine={false}
+                width={40}
+              />
 
-            {/* revenue */}
-            <Area
-              yAxisId="right"
-              dataKey="revenue"
-              type="monotone"
-              fill="url(#fillRevenue)"
-              stroke="var(--chart-6)"
-              strokeWidth={0.3} // 👈 add this
-            />
-          </AreaChart>
-        </ChartContainer>
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickLine={false}
+                axisLine={false}
+                width={60}
+                tickFormatter={(value) => `₹${value}`}
+              />
+
+              <XAxis
+                dataKey="date"
+                tickLine={false}
+                axisLine={false}
+                tickMargin={10}
+                minTickGap={20}
+                tickFormatter={(value) =>
+                  new Date(value).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })
+                }
+              />
+
+              <ChartTooltip
+                cursor={false}
+                content={
+                  <ChartTooltipContent
+                    labelFormatter={(value) =>
+                      new Date(value).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                      })
+                    }
+                  />
+                }
+              />
+
+              {/* BOOKINGS */}
+
+              <Area
+                yAxisId="left"
+                dataKey="bookings"
+                type="monotone"
+                fill="url(#fillBookings)"
+                stroke="var(--primary)"
+                strokeWidth={2}
+              />
+
+              {/* REVENUE */}
+
+              <Area
+                yAxisId="right"
+                dataKey="revenue"
+                type="monotone"
+                fill="url(#fillRevenue)"
+                stroke="var(--chart-6)"
+                strokeWidth={2}
+              />
+            </AreaChart>
+          </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

@@ -45,7 +45,6 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import {
   Columns3Icon,
   ChevronDownIcon,
-  
   ChevronsLeftIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -67,11 +66,11 @@ type DataType = z.infer<typeof schema>;
 
 // ---------------- DEFAULT COLUMNS ----------------
 
-
 // ---------------- COMPONENT ----------------
-export function DataTable({
+export function DataTableA({
   data,
   columns,
+
   TableName,
 }: {
   data: DataType[];
@@ -154,7 +153,7 @@ export function DataTable({
       {
         id: "actions",
         header: "Actions",
-        cell: ({ row }:any) => {
+        cell: ({ row }: any) => {
           const data = row.original;
 
           return (
@@ -167,8 +166,6 @@ export function DataTable({
               </DropdownMenuTrigger>
 
               <DropdownMenuContent align="end" className="w-48">
-              
-
                 {/* Edit */}
                 <DropdownMenuCheckboxItem
                   onClick={() => console.log("Edit", data)}
